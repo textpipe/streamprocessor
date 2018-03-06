@@ -1,72 +1,72 @@
 import pyspark
 from pyspark import SparkConf, SparkContext
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import udf
 from pyspark.streaming.kinesis import KinesisUtils
 from pyspark.streaming.kafka import KafkaUtils
+from pyspark.sql.functions import *
+from pyspark.sql.types import *
 
-class UnsupportedBrokerException(Exception):
-	pass
+from base import Processor, Transformer
 
 
-class SparkKafkaMessageBroker(MessageBroker):
+class SparkProcessor(Processor):
+    def __init__(self, transformer, url):
+        # super().__init__(self, transformer)
+        self._transformer = transformer
+        self._brokertype, self._topic, self._host = SparkProcessor.parse_url(url)
+
+        self._windowsize = 30
+
     @staticmethod
-    def stream(source_url, transformer, target_url, 
-               source_format=None, target_format=None):
-        producer = MessageBroker.get_producer(target_url, target_format)
-        return SparkStreamTransformer(source_url, transformer.map, producer)
+    def parse_url(url):
+        return "kafka", "sample", "localhost"
+
+    @staticmethod
+    def get_stream(brokertype, ssc):
+        if brokertype.lower() == "kafka":
+            return KafkaUtils.createStream(ssc)
+        elif brokertype.lower() == "kinesis":
+            return KinesisUtils.createStream(ssc)
+        else:
+            raise Exception("unsupported brokertype")
+
+    def go(self):
+        spark = (SparkSession
+            .builder
+            .appName(__name__)
+            .getOrCreate())  
+        
+        df = spark \
+          .readStream \
+          .format("kafka") \
+          .option("kafka.bootstrap.servers", "localhost:9092") \
+          .option("subscribe", "sample") \
+          .load()
+
+        fn = udf(lambda s: self._transformer.map(s), StringType())
+
+        df = df \
+            .withColumn('fn', fn(df.value)) \
+            .withColumnRenamed("value", "oldvalue") \
+            .withColumnRenamed("fn", "value")
+
+        ds = df \
+          .writeStream \
+          .format("kafka") \
+          .option("kafka.bootstrap.servers", "localhost:9092") \
+          .option("checkpointLocation", "/private/tmp") \
+          .option("topic", "out") \
+          .start()
+
+        ds.awaitTermination()
 
 
-class SparkStreamTransformer(StreamTransformer):
-	# https://spark.apache.org/docs/2.2.0/streaming-kafka-0-10-integration.html
-	def __init__(self, producer):		
-		#foreachMessage, topic, windowsize=120, task):
-		"""Constructor
-
-		* instantiate spark
-		* instantiate sparkContext
-		* instantiate sparkStreamingContext
-
-		Keyword Arguments:
-			foreachMessage {function} -- logic to deal with messages
-			windowsize {number} -- [description] (default: {120})
-		"""
-		self._topic = topic
-
-		self._spark = (SparkSession
-			.builder
-			.appName(args.appname)
-			.getOrCreate())  
-		self._spark_conf = (SparkConf().setAppName("MessageBroker"))
-		self._sc = SparkContext(conf = spark_conf)
-		self._ssc = StreamingContext(self._sc, windowsize)
-		self._stream = _get_stream()
-		self._foreachMessage = foreachMessage
-		self._udf = udf(self._foreachMessage) # wrap underlying function in Spark UDF
-
-		# https://spark.apache.org/docs/2.2.0/sql-programming-guide.html
-		self\
-			.stream\
-			.foreachMessage(lambda x: self._udf()(x)) # convert to dataframe first
-
-	def run(self):
-		self._ssc.start()
-		self._ssc.awaitTermination()
-
-	class KafkaBroker(MessageBroker):
-		# http://kafka.apache.org/
-
-		def _get_stream(self):
-			return KafkaUtils.createStream(self._ssc)
-
-		def push(self, message):
-			pass
+class EchoTransformer(Transformer):
+    def map(self, message):
+        message = message.decode('utf-8')
+        return message.upper()
 
 
-	class KinesisBroker(MessageBroker):
-
-		def _get_stream(self):
-			return KinesisUtils.createStream(self._ssc)
-
-		def push(self, message):
-			pass
+if __name__ == '__main__':
+    sp = SparkProcessor(transformer=EchoTransformer(), url="kafka://localhost/sample")
+    sp.go()
