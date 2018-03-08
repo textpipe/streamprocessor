@@ -6,20 +6,15 @@ from pyspark.streaming.kafka import KafkaUtils
 from pyspark.sql.functions import *
 from pyspark.sql.types import *
 
-from base import Processor, Transformer
+from base import Processor, Transformer, ParsedURL
 
 
 class SparkProcessor(Processor):
-    def __init__(self, transformer, url):
-        # super().__init__(self, transformer)
-        self._transformer = transformer
-        self._brokertype, self._topic, self._host = SparkProcessor.parse_url(url)
-
+    def __init__(self, source_url, transformer, target_url):
+        self.transformer = transformer
+        self.source_url = ParsedURL(source_url)
+        self.target_url = ParsedURL(target_url)
         self._windowsize = 30
-
-    @staticmethod
-    def parse_url(url):
-        return "kafka", "sample", "localhost"
 
     @staticmethod
     def get_stream(brokertype, ssc):
@@ -30,32 +25,30 @@ class SparkProcessor(Processor):
         else:
             raise Exception("unsupported brokertype")
 
-    def go(self):
-        spark = (SparkSession
-            .builder
+    def run(self):
+        spark = (SparkSession.builder
             .appName(__name__)
             .getOrCreate())  
         
+        # TODO: Kinesis
         df = spark \
           .readStream \
           .format("kafka") \
-          .option("kafka.bootstrap.servers", "localhost:9092") \
-          .option("subscribe", "sample") \
+          .option("kafka.bootstrap.servers", self.source_url.netloc) \
+          .option("subscribe", self.source_url.path[1:]) \
           .load()
 
-        fn = udf(lambda s: self._transformer.map(s), StringType())
+        fn = udf(lambda s: self.transformer.map(s), StringType())
 
-        df = df \
-            .withColumn('fn', fn(df.value)) \
-            .withColumnRenamed("value", "oldvalue") \
-            .withColumnRenamed("fn", "value")
+        df = df.withColumn('value', fn(df.value))
 
+        # TODO: Kinesis
         ds = df \
           .writeStream \
           .format("kafka") \
-          .option("kafka.bootstrap.servers", "localhost:9092") \
+          .option("kafka.bootstrap.servers", self.target_url.netloc) \
           .option("checkpointLocation", "/private/tmp") \
-          .option("topic", "out") \
+          .option("topic", self.target_url.path[1:]) \
           .start()
 
         ds.awaitTermination()
@@ -63,10 +56,13 @@ class SparkProcessor(Processor):
 
 class EchoTransformer(Transformer):
     def map(self, message):
+        # TODO: Remove this from Transformer
         message = message.decode('utf-8')
         return message.upper()
 
 
 if __name__ == '__main__':
-    sp = SparkProcessor(transformer=EchoTransformer(), url="kafka://localhost/sample")
-    sp.go()
+    sp = SparkProcessor("kafka://localhost:9092/sample",
+                        EchoTransformer(),
+                        "kafka://localhost:9092/out")
+    sp.run()
