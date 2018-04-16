@@ -1,6 +1,5 @@
 import sys
-
-from base import Consumer, Producer
+from client.base import Consumer, Producer
 
 
 class StandardIOConsumer(Consumer):
