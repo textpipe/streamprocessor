@@ -7,8 +7,8 @@ from pyspark.sql.functions import *
 from pyspark.sql.types import *
 import tempfile
 
-from rtl.client.base import ParsedURL
-from rtl.processor import Processor
+from streamprocessor.client.base import ParsedURL
+from streamprocessor.processor import Processor
 
 
 class SparkProcessor(Processor):

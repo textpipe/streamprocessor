@@ -1,4 +1,4 @@
-from rtl.client.base import Consumer, Producer
+from streamprocessor.client.base import Consumer, Producer
 
 
 class FileConsumer(Consumer):

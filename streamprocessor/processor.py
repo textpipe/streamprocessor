@@ -6,7 +6,7 @@ the document and applying a transformer to it.
 import pyspark
 import tempfile
 from pyspark import SparkConf, SparkContext
-from rtl.client.base import Consumer, Producer, ParsedURL
+from streamprocessor.client.base import Consumer, Producer, ParsedURL
 from pyspark.streaming.kinesis import KinesisUtils
 from pyspark.streaming.kafka import KafkaUtils
 from pyspark.sql import SparkSession

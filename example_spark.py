@@ -1,5 +1,5 @@
-from rtl.transformer import Transformer
-from rtl.spark import SparkProcessor
+from streamprocessor.transformer import Transformer
+from streamprocessor.spark import SparkProcessor
 
 
 class EchoTransformer(Transformer):

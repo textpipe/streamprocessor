@@ -1,7 +1,7 @@
 import sys
 
-from rtl.processor import StreamProcessor as Processor
-from rtl.transformer import Transformer
+from streamprocessor.processor import StreamProcessor as Processor
+from streamprocessor.transformer import Transformer
 
 
 class EchoTransformer(Transformer):

@@ -13,7 +13,7 @@ class ParsedURL:
     the parsed query
     """
     def __init__(self, url):
-        self._url = url
+        self.url = url
 
     @property
     def url(self):
@@ -48,26 +48,26 @@ class Consumer:
     def create(url, *args, **kwargs):
         parsed_url = ParsedURL(url)
         if url == 'file:///dev/stdin':
-            import rtl.client.stdio
-            return rtl.client.stdio.StandardIOConsumer(url, *args, **kwargs)
+            import streamprocessor.client.stdio
+            return streamprocessor.client.stdio.StandardIOConsumer(url, *args, **kwargs)
         elif parsed_url.scheme.lower() == 'kafka':
             try:
-                import rtl.client.confluentkafka
+                import streamprocessor.client.confluentkafka
             except ImportError:
                 logging.warning('Cannot import Confluent Kafka during Consumer create, falling back to python-kafka.')
                 try:
-                    import rtl.client.kafka
+                    import streamprocessor.client.kafka
                 except ImportError:
                     logging.error('Error importing Kafka during Consumer create.')
                     raise
-                return rtl.client.kafka.KafkaConsumer(url, *args, **kwargs)
-            return rtl.client.confluentkafka.ConfluentKafkaConsumer(url, *args, **kwargs)
+                return streamprocessor.client.kafka.KafkaConsumer(url, *args, **kwargs)
+            return streamprocessor.client.confluentkafka.ConfluentKafkaConsumer(url, *args, **kwargs)
         if parsed_url.scheme == 'file':
-            import rtl.client.file
-            return rtl.client.file.FileConsumer(url, *args, **kwargs)
+            import streamprocessor.client.file
+            return streamprocessor.client.file.FileConsumer(url, *args, **kwargs)
         if parsed_url.scheme == 'elasticsearch':
-            import rtl.client.elasticsearch
-            return rtl.client.elasticsearch.ElasticsearchConsumer(url, *args, *kwargs)
+            import streamprocessor.client.elasticsearch
+            return streamprocessor.client.elasticsearch.ElasticsearchConsumer(url, *args, *kwargs)
         else:
             raise NotImplementedError(
                 'Scheme {} is not supported'.format(parsed_url.scheme))
@@ -88,11 +88,11 @@ class Producer:
     def create(url, *args, **kwargs):
         parsed_url = ParsedURL(url)
         if url == 'file:///dev/stdout':
-            import rtl.client.stdio
-            return rtl.client.stdio.StandardIOProducer(url, *args, **kwargs)
+            import streamprocessor.client.stdio
+            return streamprocessor.client.stdio.StandardIOProducer(url, *args, **kwargs)
         elif parsed_url.scheme == 'elasticsearch':
-            import rtl.client.elasticsearch
-            return rtl.client.elasticsearch.ElasticsearchProducer(url, *args, *kwargs)
+            import streamprocessor.client.elasticsearch
+            return streamprocessor.client.elasticsearch.ElasticsearchProducer(url, *args, *kwargs)
         else:
             raise NotImplementedError(
                 'Scheme {} is not supported'.format(parsed_url.scheme))

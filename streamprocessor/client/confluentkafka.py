@@ -1,4 +1,4 @@
-from rtl.client.base import Consumer
+from streamprocessor.client.base import Consumer
 import confluent_kafka
 import os
 import sys
