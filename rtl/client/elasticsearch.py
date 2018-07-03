@@ -1,5 +1,5 @@
 import elasticsearch
-from client.base import Consumer, Producer
+from rtl.client.base import Consumer, Producer
 
 class ElasticsearchConsumer(Consumer):
     def __init__(self, url, **kwargs): 

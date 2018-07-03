@@ -1,5 +1,5 @@
 import sys
-from client.base import Consumer, Producer
+from rtl.client.base import Consumer, Producer
 
 
 class StandardIOConsumer(Consumer):

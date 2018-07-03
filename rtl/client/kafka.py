@@ -1,4 +1,4 @@
-from client.base import Consumer
+from rtl.client.base import Consumer
 import kafka
 import os
 import sys

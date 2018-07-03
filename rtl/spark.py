@@ -8,7 +8,6 @@ from pyspark.sql.types import *
 import tempfile
 
 from rtl.client.base import ParsedURL
-from rtl.transformer.transformer import Transformer
 from rtl.processor import Processor
 
 
@@ -68,17 +67,3 @@ class SparkProcessor(Processor):
               .start()
 
         ds.awaitTermination()
-
-
-class EchoTransformer(Transformer):
-    def map(self, message):
-        # TODO: Remove this from Transformer
-        message = message.decode('utf-8')
-        return message.upper()
-
-
-if __name__ == '__main__':
-    sp = SparkProcessor("kafka://localhost:9092/sample",
-                        EchoTransformer(),
-                        "kafka://localhost:9092/out")
-    sp.run()
