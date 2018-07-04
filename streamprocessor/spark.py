@@ -1,10 +1,4 @@
-import pyspark
-from pyspark import SparkConf, SparkContext
-from pyspark.sql import SparkSession
-from pyspark.streaming.kinesis import KinesisUtils
-from pyspark.streaming.kafka import KafkaUtils
-from pyspark.sql.functions import *
-from pyspark.sql.types import *
+from pyspark.sql import SparkSession, types, functions as F
 import tempfile
 
 from streamprocessor.client.base import ParsedURL
@@ -54,7 +48,7 @@ class SparkProcessor(Processor):
           .option("subscribe", self.source_url.path[1:]) \
           .load()
 
-        fn = udf(lambda s: self.transformer.map(s), StringType())
+        fn = F.udf(lambda s: self.transformer.map(s), types.StringType())
 
         df = df.withColumn('value', fn(df.value))
         with tempfile.TemporaryDirectory() as tmpdirname:
